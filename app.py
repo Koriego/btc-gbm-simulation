@@ -22,10 +22,24 @@ except:
 def load_btc_data():
     today = datetime.today().strftime('%Y-%m-%d')
     btc = yf.download("BTC-USD", start="2021-01-01", end=today, interval="1d", auto_adjust=True)
+    
+    # Normalizar columnas en caso de MultiIndex
+    if isinstance(btc.columns, pd.MultiIndex):
+        btc.columns = btc.columns.get_level_values(0)
+    
+    if 'Close' not in btc.columns:
+        st.error("Error: La columna 'Close' no fue encontrada en los datos descargados.")
+        return pd.Series(dtype='float64')  # Serie vacía para evitar errores
+    
     btc = btc.dropna(subset=['Close'])
     return btc['Close']
 
 prices = load_btc_data()
+
+if prices.empty:
+    st.error("No se pudieron cargar datos de BTC-USD. Por favor, intenta recargar la página o verifica la conexión.")
+    st.stop()
+
 log_returns = np.log(prices / prices.shift(1)).dropna()
 mu = log_returns.mean()
 sigma = log_returns.std()
@@ -109,3 +123,5 @@ Este modelo es ampliamente usado en finanzas para simulaciones y valoración de 
 ---
 """
 )
+
+
